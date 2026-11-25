@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لما أحتاج مساعدة أعمل إيه؟</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff7e6;font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#222;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+h1{font-size:clamp(22px,3.4vw,36px);margin:14px 10px 8px;color:#b25400;text-align:center}
+#stage{position:relative;width:min(96vw,1100px);aspect-ratio:16/9;background:#000;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px #0004}
+video{width:100%;height:100%;display:block;background:#000}
+#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#0006;padding:2%}
+#card{background:#fff;border-radius:20px;padding:clamp(12px,2.4vw,28px);width:min(94%,720px);max-height:96%;overflow:auto;text-align:center}
+#q{font-size:clamp(20px,3.6vw,38px);font-weight:700;margin:0 0 clamp(8px,1.6vw,18px)}
+.say{background:#eef4ff;border:2px solid #9bb8ee;border-radius:50%;width:48px;height:48px;font-size:24px;cursor:pointer;margin-bottom:8px}
+.opt{display:block;width:100%;margin:clamp(6px,1.2vw,12px) 0;padding:clamp(12px,2.2vw,24px);font-size:clamp(18px,3.2vw,34px);font-family:inherit;font-weight:600;border:4px solid #7aa7ea;background:#f1f6ff;color:#17407f;border-radius:18px;cursor:pointer}
+.opt:hover,.opt:focus{background:#dbe9ff;outline:none}
+.opt.right{background:#d8f5d8;border-color:#2e9e3e;color:#146b22}
+.opt.soft{animation:wob .5s}
+@keyframes wob{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.opt.hint{animation:glow 1s infinite alternate}
+@keyframes glow{to{box-shadow:0 0 0 8px #ffd95a;background:#fff6cf;border-color:#e0a800;color:#6b4c00}}
+#fb{font-size:clamp(18px,3vw,32px);font-weight:700;margin:10px 0;min-height:1.3em}
+#fb.ok{color:#146b22}#fb.try{color:#9a5b00}
+#cont{display:none;margin-top:8px;font-size:clamp(20px,3.2vw,34px);font-family:inherit;font-weight:700;padding:14px 40px;background:#1f8f3a;color:#fff;border:0;border-radius:40px;cursor:pointer}
+#star{font-size:clamp(34px,5vw,56px);display:none;animation:pop .6s}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.3)}100%{transform:scale(1)}}
+#start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000a;color:#fff;cursor:pointer;border:0;width:100%;font-family:inherit}
+#start span{font-size:clamp(70px,12vw,140px)}
+#start b{font-size:clamp(22px,4vw,44px)}
+#dots{margin:12px;font-size:clamp(22px,3.4vw,34px)}
+#end{display:none;position:absolute;inset:0;background:#fffc;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+#end h2{font-size:clamp(28px,5vw,56px);color:#146b22;margin:6px}
+#end button{font-size:clamp(20px,3vw,32px);font-family:inherit;padding:12px 36px;border-radius:40px;border:0;background:#1f8f3a;color:#fff;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>لما أحتاج مساعدة أعمل إيه؟</h1>
+<div id="stage">
+  <video id="v" playsinline preload="auto"></video>
+  <button id="start" aria-label="ابدأ"><span>▶</span><b>اضغط للبدء</b></button>
+  <div id="overlay"><div id="card">
+    <button class="say" id="say" title="اسمع السؤال" aria-label="اسمع السؤال">🔊</button>
+    <p id="q"></p>
+    <div id="opts"></div>
+    <div id="star">⭐</div>
+    <div id="fb"></div>
+    <button id="cont">كمّل ▶</button>
+  </div></div>
+  <div id="end"><h2>🌟 أحسنت! 🌟</h2><button id="again">شاهد مرة تانية</button></div>
+</div>
+<div id="dots"></div>
+<script>
+// نقاط التوقف والأسئلة (من التسجيل الأصلي)؛ الإجابة الصحيحة هي الأولى
+var QS=[
+ {t:16,q:"يا ترى إيه التصرف الصح؟",o:["أسأل المشرف (الميس)","امشي من غير ما أسأل حد؟"]},
+ {t:34,q:"أخلي الميس تساعدني؟",o:["أيوه","لأ"]},
+ {t:50,q:"يا ترى يعمل إيه قبل ما يخرج؟",o:["يستأذن من الميس","يخرج من غير إذن"]},
+ {t:66,q:"تفتكر كريم يعمل إيه؟",o:["يقول للميس تساعده بسرعة؟","يحركه من مكانه؟"]}
+];
+var OK="برافو عليك! 👏 إجابة صحيحة، أنت شاطر ❤️", TRY="انت تقدر، جرب تاني يلا 💪";
+var v=document.getElementById('v'),ov=document.getElementById('overlay'),opts=document.getElementById('opts'),
+ fb=document.getElementById('fb'),cont=document.getElementById('cont'),star=document.getElementById('star'),
+ qe=document.getElementById('q'),dots=document.getElementById('dots'),end=document.getElementById('end');
+var PARTS=["5-q0.txt","6-q1.txt","3-q2.txt","7-q3.txt","62-p02.txt","65-p03.txt","8-p04.txt","10-p05.txt","11-p06.txt","26-p07.txt","30-p08.txt","16-p09.txt","28-p10.txt","18-p11.txt","19-p12.txt","20-p13.txt","21-p14.txt","29-p15.txt","23-p16.txt","31-p17.txt","25-p18.txt","32-p19.txt","34-p20.txt"],ready=false,startBtn=document.getElementById('start'),startLbl=startBtn.querySelector('b');
+startLbl.textContent="جاري التحميل...";
+function b64(t){var s=atob(t.trim()),a=new Uint8Array(s.length);for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
+Promise.all(PARTS.map(function(p){return fetch(p).then(function(r){if(!r.ok)throw 0;return r.text()}).then(b64)})).then(function(bs){
+ v.src=URL.createObjectURL(new Blob(bs,{type:"video/mp4"}));ready=true;startLbl.textContent="اضغط للبدء";
+}).catch(function(){startLbl.textContent="حصلت مشكلة في التحميل، حدّث الصفحة"});
+var idx=0,cur=null,done=[];
+function drawDots(){dots.textContent=QS.map(function(_,i){return done[i]?"⭐":"☆"}).join(" ")}
+function speak(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang="ar-EG";speechSynthesis.speak(u)}catch(e){}}
+function snd(f1,f2){try{var c=new (window.AudioContext||window.webkitAudioContext)();[f1,f2].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.frequency.value=f;o.connect(g);g.connect(c.destination);g.gain.value=.15;o.start(c.currentTime+i*.18);o.stop(c.currentTime+i*.18+.16)})}catch(e){}}
+function show(i){
+  cur=QS[i];v.pause();
+  qe.textContent=cur.q;fb.textContent="";fb.className="";cont.style.display="none";star.style.display="none";opts.innerHTML="";
+  var order=cur.o.map(function(t,k){return k});
+  var sw=(i%2===0)?Math.random()<.5:Math.random()<.5;
+  if(sw)order.reverse();
+  order.forEach(function(k){var b=document.createElement('button');b.className="opt";b.textContent=cur.o[k];b.dataset.ok=(k===0)?"1":"0";b.onclick=function(){pick(b,k)};opts.appendChild(b)});
+  ov.style.display="flex";
+}
+function pick(b,k){
+  if(cont.style.display==="block")return;
+  if(k===0){
+    b.classList.add('right');snd(660,880);fb.textContent=OK;fb.className="ok";
+    star.style.display="block";cont.style.display="block";done[idx]=true;drawDots();
+    Array.prototype.forEach.call(opts.children,function(x){x.disabled=true;if(x.dataset.ok!=='1')x.style.display='none'});
+  }else{
+    snd(520,560);b.classList.remove('soft');void b.offsetWidth;b.classList.add('soft');
+    fb.textContent=TRY;fb.className="try";Array.prototype.forEach.call(opts.children,function(x){if(x.dataset.ok==='1')x.classList.add('hint')});
+  }
+}
+cont.onclick=function(){ov.style.display="none";idx++;v.play()};
+document.getElementById('say').onclick=function(){speak(cur.q)};
+v.addEventListener('timeupdate',function(){
+  if(idx<QS.length&&!v.paused&&v.currentTime>=QS[idx].t){v.currentTime=QS[idx].t;show(idx)}
+});
+v.addEventListener('ended',function(){end.style.display="flex"});
+startBtn.onclick=function(){if(!ready)return;this.style.display="none";v.play()};
+document.getElementById('again').onclick=function(){end.style.display="none";idx=0;done=[];drawDots();v.currentTime=0;v.play()};
+drawDots();
+(function(){var p=new URLSearchParams(location.search);if(!p.has('q'))return;
+ idx=+p.get('q');document.getElementById('start').style.display="none";v.currentTime=QS[idx].t-0.05;v.muted=true;
+ v.addEventListener('seeked',function f(){v.removeEventListener('seeked',f);show(idx);var s=p.get('s');var ch=Array.prototype.slice.call(opts.children);if(s==='wrong'){var w=ch.filter(function(x){return x.dataset.ok==='0'})[0];w.click()}if(s==='right')ch.filter(function(x){return x.dataset.ok==='1'})[0].click()});})();
+</script>
+</body></html>
