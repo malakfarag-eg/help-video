@@ -38,6 +38,15 @@ video{width:100%;height:100%;display:block;background:#000}
 #bar button:active{transform:scale(.96)}
 #bar button:disabled{background:#9aa;cursor:default}
 #seek{flex:1;height:34px;accent-color:#e07b00;direction:ltr}
+@media (max-width:700px),(max-height:520px){
+#overlay{position:fixed;inset:0;z-index:50;background:#000b;padding:10px}
+#card{width:100%;max-height:96vh;padding:14px}
+#q{font-size:22px}.opt{font-size:21px;padding:16px;border-width:3px}#fb{font-size:20px}#cont{font-size:22px}
+#bar{flex-wrap:wrap;gap:8px;justify-content:center}
+#bar button{font-size:20px;padding:12px 18px;flex:1}
+#seek{flex:0 0 100%;order:3}
+#dots{font-size:26px}
+}
 </style>
 </head>
 <body>
@@ -72,9 +81,16 @@ var v=document.getElementById('v'),ov=document.getElementById('overlay'),opts=do
 var PARTS=["5-q0.txt","6-q1.txt","3-q2.txt","7-q3.txt","62-p02.txt","65-p03.txt","8-p04.txt","10-p05.txt","11-p06.txt","26-p07.txt","30-p08.txt","16-p09.txt","28-p10.txt","18-p11.txt","19-p12.txt","20-p13.txt","21-p14.txt","29-p15.txt","23-p16.txt","31-p17.txt","25-p18.txt","32-p19.txt","34-p20.txt"],ready=false,startBtn=document.getElementById('start'),startLbl=startBtn.querySelector('b');
 startLbl.textContent="جاري التحميل...";
 function b64(t){var s=atob(t.trim()),a=new Uint8Array(s.length);for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
-Promise.all(PARTS.map(function(p){return fetch(p).then(function(r){if(!r.ok)throw 0;return r.text()}).then(b64)})).then(function(bs){
- v.src=URL.createObjectURL(new Blob(bs,{type:"video/mp4"}));ready=true;startLbl.textContent="اضغط للبدء";
-}).catch(function(){startLbl.textContent="حصلت مشكلة في التحميل، حدّث الصفحة"});
+var MP4="https://github.com/malakfarag-eg/help-video/releases/download/v1/1-help-video.mp4",fell=false;
+function okReady(){if(ready)return;ready=true;startLbl.textContent="اضغط للبدء"}
+function fallback(){if(fell||ready)return;fell=true;var n=0;startLbl.textContent="جاري التحميل... 0%";
+ Promise.all(PARTS.map(function(p){return fetch(p).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){n++;startLbl.textContent="جاري التحميل... "+Math.round(n/PARTS.length*100)+"%";return b64(t)})})).then(function(bs){
+  v.removeAttribute('src');v.src=URL.createObjectURL(new Blob(bs,{type:"video/mp4"}));okReady();
+ }).catch(function(){startLbl.textContent="حصلت مشكلة في التحميل، حدّث الصفحة"})}
+v.addEventListener('loadedmetadata',function(){if(!fell)okReady()});
+v.addEventListener('error',function(){if(!fell&&!ready)fallback()});
+setTimeout(function(){if(!ready)fallback()},7000);
+v.preload="auto";v.src=MP4;
 var idx=0,cur=null,done=[];
 function drawDots(){dots.textContent=QS.map(function(_,i){return done[i]?"⭐":"☆"}).join(" ")}
 function speak(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang="ar-EG";speechSynthesis.speak(u)}catch(e){}}
